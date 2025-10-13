@@ -7,11 +7,21 @@ export class BaseRoom extends Room<RoomState> {
 
   public state = new RoomState();
 
-  onCreate(options: any) {
+  onCreate(_options: unknown) {
     this.onMessage(
       'action',
-      (client, message: { to?: string; payload?: any }) => {
+      (client, message: { to?: string; payload?: unknown }) => {
         const { to, payload } = message;
+
+        if (
+          payload &&
+          typeof payload === 'object' &&
+          'score' in payload &&
+          typeof payload.score === 'number'
+        ) {
+          const player = this.state.players.get(client.sessionId);
+          player.score = payload.score;
+        }
 
         if (to) {
           // Send action to a specific player
@@ -41,17 +51,25 @@ export class BaseRoom extends Room<RoomState> {
     );
   }
 
-  onJoin(client: Client, options: any) {
+  onJoin(client: Client, options: unknown) {
     console.log(client.sessionId, 'joined!', options);
 
+    const { id, name, avatar, score } = options as {
+      id: string;
+      name: string;
+      avatar: string;
+      score: number;
+    };
+
     const player = new PlayerState();
-    player.fbId = options.fbId;
-    player.name = options.name;
-    player.avatar = options.avatar;
+    player.id = id;
+    player.name = name;
+    player.avatar = avatar;
+    player.score = score;
     this.state.players.set(client.sessionId, player);
   }
 
-  onLeave(client: Client, consented: boolean) {
+  onLeave(client: Client, _consented: boolean) {
     console.log(client.sessionId, 'left!');
 
     this.state.players.delete(client.sessionId);
